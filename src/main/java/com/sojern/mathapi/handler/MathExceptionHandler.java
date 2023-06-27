@@ -17,6 +17,10 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @ControllerAdvice
 public class MathExceptionHandler extends ResponseEntityExceptionHandler {
 
+    public static final String A_NULL_VALUE_WAS_ENCOUNTERED_IN_THE_REQUEST = "A null value was encountered in the request.";
+    public static final String A_NULL_VALUE_WAS_ENCOUNTERED_IN_AN_ARRAY_IN_THE_REQUEST = "A null value was encountered in an array in the request.";
+    public static final String MORE_THAN_2_DIGITS_IN_NUMBER_IN_LIST = "more than 2 digits in number in list";
+
     @ExceptionHandler(InvalidQuantifierException.class)
     protected ResponseEntity<Object> handleEntityNotFound(
             InvalidQuantifierException ex) {
@@ -31,20 +35,17 @@ public class MathExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<Object> handleNullPointerException(NullPointerException ex) {
-        String errorMessage = "A null value was encountered in the request.";
-        return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(A_NULL_VALUE_WAS_ENCOUNTERED_IN_THE_REQUEST, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ArrayListContainsNullValueException.class)
     public ResponseEntity<Object> handleArrayListContainsNullValueException(ArrayListContainsNullValueException ex) {
-        String errorMessage = "A null value was encountered in an array in the request.";
-        return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(A_NULL_VALUE_WAS_ENCOUNTERED_IN_AN_ARRAY_IN_THE_REQUEST, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(DoublesMoreThanTwoDigitsException.class)
     public ResponseEntity<Object> handleDoublesMoreThanTwoDigitsException(DoublesMoreThanTwoDigitsException ex) {
-        String errorMessage = "more than 2 digits in number in list";
-        return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(MORE_THAN_2_DIGITS_IN_NUMBER_IN_LIST, HttpStatus.BAD_REQUEST);
     }
 
 
@@ -52,11 +53,15 @@ public class MathExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(
             HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid request body");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        if (ex.getBindingResult().hasErrors()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getBindingResult().getAllErrors().get(0).getDefaultMessage());
+
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 

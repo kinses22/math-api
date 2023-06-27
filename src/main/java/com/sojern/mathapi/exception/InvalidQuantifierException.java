@@ -9,8 +9,4 @@ public class InvalidQuantifierException extends MathException{
     public InvalidQuantifierException(String message) {
         super(message);
     }
-
-    public InvalidQuantifierException(String message, Throwable cause) {
-        super(message, cause);
-    }
 }

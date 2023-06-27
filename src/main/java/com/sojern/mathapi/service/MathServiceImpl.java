@@ -1,59 +1,80 @@
 package com.sojern.mathapi.service;
 
-import com.sojern.mathapi.exception.ArrayListContainsNullValueException;
-import com.sojern.mathapi.exception.ArrayListSizeException;
-import com.sojern.mathapi.exception.DoublesMoreThanTwoDigitsException;
-import com.sojern.mathapi.exception.InvalidQuantifierException;
+import com.sojern.mathapi.util.MathValidator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
+/**
+ * Service class for math operations listed below
+ *
+ * @author Stephen Kinsella
+ */
 @Service
 public class MathServiceImpl implements MathService {
 
     public static final int ZERO = 0;
+    public MathValidator mathValidator;
 
+    @Autowired
+    public MathServiceImpl(final MathValidator mathValidator) {
+        this.mathValidator = mathValidator;
+    }
+
+    /**
+     * Gets the minimum numbers from the given list based on a quantifier provided.
+     * @param quantifier a quantifier to decide how many to bring back.
+     * @param numbers containing a list of numbers.
+     * @return List which contains a list of one or more values.
+     */
     @Override
     public List<Double> getMinimumNumberList(int quantifier, List<Double> numbers) {
 
-        validateArraySize(numbers);
-        hasNumberWithMoreThanTwoDecimals(numbers);
-        validateQuantifier(quantifier, numbers);
-        List<Double> sortedNonNullList = filterForNullValuesAndSort(numbers);
+        mathValidator.validateQuantifier(quantifier, numbers);
+        List<Double> sortedNonNullList = validateList(numbers, true);
 
         return sortedNonNullList.subList(ZERO, quantifier);
     }
 
+    /**
+     * Gets the maximum numbers from the given list based on a quantifier provided.
+     * @param quantifier a quantifier to decide how many to bring back.
+     * @param numbers containing a list of numbers.
+     * @return List which contains a list of one or more values.
+     */
     @Override
     public List<Double> getMaximumNumberList(int quantifier, List<Double> numbers) {
 
-        validateArraySize(numbers);
-        hasNumberWithMoreThanTwoDecimals(numbers);
-        validateQuantifier(quantifier, numbers);
-        List<Double> sortedNonNullList = filterForNullValuesAndSort(numbers);
+        mathValidator.validateQuantifier(quantifier, numbers);
+        List<Double> sortedNonNullList = validateList(numbers, true);
 
         return sortedNonNullList.subList(numbers.size() - quantifier, numbers.size());
     }
 
+    /**
+     * Gets the average from the given list.
+     * @param numbers containing a list of numbers.
+     * @return an average value.
+     */
     @Override
     public double getAverageFromNumberList(List<Double> numbers) {
 
-        validateArraySize(numbers);
-        hasNumberWithMoreThanTwoDecimals(numbers);
-        List<Double> nonNullList = filterForNullValues(numbers);
+        List<Double> nonNullList = validateList(numbers, false);
 
         double sum = nonNullList.stream().mapToDouble(Double::doubleValue).sum();
         return sum / nonNullList.size();
     }
 
+    /**
+     * Gets the median from the given list.
+     * @param numbers containing a list of numbers.
+     * @return a median value.
+     */
     @Override
     public double getMedianFromNumberList(List<Double> numbers) {
 
-        validateArraySize(numbers);
-        hasNumberWithMoreThanTwoDecimals(numbers);
-        List<Double> sortedNonNullList = filterForNullValuesAndSort(numbers);
+        List<Double> sortedNonNullList = validateList(numbers, true);
 
         double median;
         int middleIndex = numbers.size() / 2;
@@ -65,82 +86,38 @@ public class MathServiceImpl implements MathService {
         return median;
     }
 
+    /**
+     * Gets the median from the given list and a quantifier.
+     * @param quantifier a quantifier to decide the percentile.
+     * @param numbers containing a list of numbers.
+     * @return a percentile value.
+     */
     @Override
     public double getPercentileFromList(int quantifier, List<Double> numbers) {
 
-        validateArraySize(numbers);
-        hasNumberWithMoreThanTwoDecimals(numbers);
-        List<Double> sortedNonNullList = filterForNullValuesAndSort(numbers);
-        // Validate Qualifier
+        mathValidator.validatePercentileQuantifier(quantifier);
+        List<Double> sortedNonNullList = validateList(numbers, true);
 
-//        int index = (int) Math.round(sortedNonNullList.size() * (quantifier/100.0) + (100 - quantifier)/100.0) - 1;
-//        return sortedNonNullList.get(index);
-
-
-        double index = (quantifier/100.0) * sortedNonNullList.size() - 1;
+        double index = (quantifier/100.0) * (sortedNonNullList.size() - 1);
         int lowerIndex = (int) Math.floor(index);
         int upperIndex = (int) Math.ceil(index);
         double differenceLower = index - lowerIndex;
         double differenceHigher = upperIndex - index;
 
-        return numbers.get(differenceHigher > differenceLower? lowerIndex: upperIndex);
+        return sortedNonNullList.get(differenceHigher > differenceLower? lowerIndex: upperIndex);
 
     }
-    // 1,5,10,15,20,30,50 -> 80 : 30 (test)
-    // 1,5.5,10,15.5,20,30.5,50.5 : 50 -> 15.5
-    // 1,10,15,20 -> 84 - 15
 
-
-    private void validateQuantifier(int quantifier, List<Double> numbers) {
-
-        if (numbers.size() <= quantifier || quantifier < 1) {
-            throw new InvalidQuantifierException("Quantifier should not be equal or greater than list size");
-        }
-    }
-
-    private void validateArraySize(List<Double> numbers) {
-
-        if (numbers.isEmpty() || numbers.size() > 20) {
-            throw new ArrayListSizeException("List size: " + numbers.size() + " must be greater than 0 and less than or equal to 20");
-        }
-    }
-
-    private List<Double> filterForNullValuesAndSort(List<Double> numbers) {
-
-        List<Double> sortedNonNullList = numbers.stream()
-                .filter(Objects::nonNull).sorted()
-                .collect(Collectors.toList());
-
-        checkNullValueInArray(numbers, sortedNonNullList);
+    /**
+     * Validates the list using the MathValidator class
+     * @param numbers a list of Doubles.
+     * @param sort a boolean value.
+     * @return a list of Doubles.
+     */
+    private List<Double> validateList(List<Double> numbers, boolean sort) {
+        mathValidator.validateArraySize(numbers);
+        List<Double> sortedNonNullList = mathValidator.filterForNullValues(numbers, sort);
+        mathValidator.hasNumberWithMoreThanTwoDecimals(numbers);
         return sortedNonNullList;
-    }
-
-    private List<Double> filterForNullValues(List<Double> numbers) {
-
-        List<Double> sortedNonNullList = numbers.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        checkNullValueInArray(numbers, sortedNonNullList);
-        return sortedNonNullList;
-    }
-
-    private void checkNullValueInArray(List<Double> numbers,
-                                       List<Double> sortedNonNullList) {
-        if (sortedNonNullList.size() != numbers.size()) {
-            throw new ArrayListContainsNullValueException("There was null values in the list");
-        }
-    }
-
-    private void hasNumberWithMoreThanTwoDecimals(List<Double> numbers) {
-
-        boolean hasMoreThanTwoDecimals = numbers.stream().anyMatch(
-                n -> {
-                    String decimalPoint = String.valueOf(n).split("\\.")[1];
-                    return decimalPoint.length() > 2;
-                });
-        if (hasMoreThanTwoDecimals) {
-            throw new DoublesMoreThanTwoDigitsException("Array contains numbers with more than two decimal points");
-        }
     }
 }
